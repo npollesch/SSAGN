@@ -9,14 +9,14 @@
 
 library(shiny)
 library(visNetwork)
-library(googledrive)
+#library(googledrive)
 library(plyr)
 library(shinythemes)
 
 # Define UI for application that draws network
 ui <- fluidPage( theme = shinytheme("cyborg"),
     
-    titlePanel("Superior Science Advocacy Group/Network"),
+    titlePanel("Cafe Scientifique Twin Ports - SSAG/N"),
     #setBackgroundColor(color="Black"),
       sidebarLayout(
       
@@ -25,13 +25,28 @@ ui <- fluidPage( theme = shinytheme("cyborg"),
         actionButton("focus_now", "Zoom in!"),
         uiOutput("choose_node_inst"),
         actionButton("focus_now_inst", "Zoom in!"),
-        actionButton("zoom_out","Zoom out!")
+        h5(textOutput("shiny_return")),
+        h5(textOutput("nodeid")),
+        h5(textOutput("nodeaffl")),
+        tags$head(tags$style("#nodeid{color: orange;
+                                 font-size: 20px;
+                                 }"
+        ),tags$style("#nodeaffl{color: orange;
+                                 font-size: 14px;
+                                 }"
+        ),tags$style("#shiny_return{color: gray;
+                                 font-size: 20px;
+                                 }"
+        )
+        ),
         ),
       
       mainPanel(
-        h4(textOutput("shiny_return")),
+       
+        
+        actionButton("zoom_out","Reset view!"),
         visNetworkOutput("network_proxy_nodes",height = "800px")
-        #h4(textOutput("nodes_data_from_shiny"))
+       
       )
     )
 #visNetworkOutput("network_hello",height = "800px")
@@ -42,10 +57,14 @@ ui <- fluidPage( theme = shinytheme("cyborg"),
 server <- function(input, output) {
 
   network_raw<-read.csv("cstpnetwork.csv")
-  nodes <- data.frame(id = network_raw$Name, Affiliation1 = network_raw$Affiliation.1, Affiliation2 = network_raw$Affiliation.2, CSTPEventTitle=network_raw$Presentation.Title, person=T)
-  nodes<-rbind.fill(nodes,data.frame(id = unique(network_raw$Affiliation.1), person=F))
-  nodes<-rbind.fill(nodes,data.frame(id = unique(network_raw$Affiliation.2), person=F))
-  nodes<-rbind.fill(nodes,data.frame(id = "Cafe Scientifique Twin Ports", person=F,image="iconcstp.jpg",shape="circularImage"))
+  nodes <- data.frame(id = network_raw$Name, 
+                      Affiliation1 = network_raw$Affiliation.1, 
+                      Affiliation2 = network_raw$Affiliation.2, 
+                      CSTPEventTitle=network_raw$Presentation.Title, 
+                      group="Person",person=T)
+  nodes<-rbind.fill(nodes,data.frame(id = unique(network_raw$Affiliation.1), person=F, group="Institution"))
+  nodes<-rbind.fill(nodes,data.frame(id = unique(network_raw$Affiliation.2), person=F, group="Institution"))
+  nodes<-rbind.fill(nodes,data.frame(id = "Cafe Scientifique Twin Ports", person=F, group="CSTP"))
   nodes$Affiliation2[which(nodes$Affiliation2=="")]<-NA
   nodes<-nodes[!duplicated(nodes$id),]
   nodes<-nodes[-which(nodes$id==""),]
@@ -61,35 +80,54 @@ server <- function(input, output) {
   edges<-rbind(CSTPtoPeeps,Af1toAf2,PeepstoAf2,PeepstoAf1)
   
   output$network_proxy_nodes <- renderVisNetwork({
-    visNetwork(nodes, edges) %>%
+    visNetwork(nodes, edges,main="Superior Science Advocacy Group/Network",submain="This network shows the connections between CSTP event leaders and the instutions they represent or areas they are experts in. We have big plans for using this network, so stay tuned.") %>%
       visInteraction(hover = T) %>%
+      visGroups(groupname="CSTP",size=75,shape="image",image=list(selected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp-selected.png",unselected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp.png")) %>%
+     # visNodes(color=list(hover="purple",highlight="red"))%>%
+      visGroups(groupname="Institution",shape="square",color=list(hover="gray",highlight='orange'))%>%
+      visGroups(groupname="Person",color=list(hover="gray",highlight="orange"))%>%
+      visLegend(position="right",width=.1) %>%
       visEvents(hoverNode = "function(nodes) {
         Shiny.onInputChange('current_node_id', nodes);
       ;}") %>%
-visEvents(select = "function(nodes){Shiny.onInputChange('current_node_id',nodes.nodes);
+      visEvents(select = "function(nodes) {
+                Shiny.onInputChange('current_node_id_select', nodes.nodes);
                 ;}")
   })
   
+  ###### Select events
+  output$nodeid = reactive({
+    
+    n <- input$current_node_id_select
+    mynode <- nodes[(nodes$id == n),1]
+    myaffl1 <- nodes$Affiliation1[(nodes$id==n)]
+    myaffl2 <- nodes$Affiliation2[(nodes$id==n)]
+    if(is.null(n)){out<-""}
+    else(out<-paste(mynode))
+    return(out)
+  })
+  
+  output$nodeaffl = reactive({
+    
+    n <- input$current_node_id_select
+    myaffl1 <- nodes$Affiliation1[(nodes$id==n)]
+    if(is.null(n)){out<-""}
+    else(
+      if(is.na(myaffl1)){out<-""}
+         else(out<-paste("Affiliation: ",myaffl1,sep="")))
+    return(out)
+  })
+  
+  ##### Hover events
   
   output$shiny_return <-
   renderText({
-    if(is.null(input$current_node_id)){"Hover for info"}
-    else(input$current_node_id[[1]])
+    if(is.null(input$current_node_id)){""}
+    else(paste("",input$current_node_id[[1]]))
   })
   
-  myNode <- reactiveValues(selected = '')
-  
-  observeEvent(input$current_node_id, {
-    myNode$selected <<- input$current_node_id
-  })
-  
-  output$table <- renderText({
-    nodes[which(myNode$selected == nodes$id),]
-  })
-  
-  
-  
-  
+
+#### Zoom and focus events
   
   observeEvent(input$focus_now, {
     visNetworkProxy("network_proxy_nodes") %>%
