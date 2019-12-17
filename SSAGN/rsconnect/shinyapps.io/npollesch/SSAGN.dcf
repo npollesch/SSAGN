@@ -5,8 +5,8 @@ account: npollesch
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1600471
-bundleId: 2676350
+bundleId: 2676867
 url: https://npollesch.shinyapps.io/SSAGN/
-when: 1576611771.07367
+when: 1576625281.20771
 asMultiple: FALSE
 asStatic: FALSE

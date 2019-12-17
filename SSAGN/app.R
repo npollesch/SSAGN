@@ -25,17 +25,18 @@ ui <- fluidPage( theme = shinytheme("cyborg"),
         actionButton("focus_now", "Zoom in!"),
         uiOutput("choose_node_inst"),
         actionButton("focus_now_inst", "Zoom in!"),
-        h5(textOutput("shiny_return")),
+        actionButton("zoom_out","Reset view!"),
         h5(textOutput("nodeid")),
         h5(textOutput("nodeaffl")),
+        h5(textOutput("hovernode")),
         tags$head(tags$style("#nodeid{color: orange;
                                  font-size: 20px;
                                  }"
         ),tags$style("#nodeaffl{color: orange;
                                  font-size: 14px;
                                  }"
-        ),tags$style("#shiny_return{color: gray;
-                                 font-size: 20px;
+        ),tags$style("#hovernode{color: gray;
+                                 font-size: 14px;
                                  }"
         )
         ),
@@ -44,7 +45,7 @@ ui <- fluidPage( theme = shinytheme("cyborg"),
       mainPanel(
        
         
-        actionButton("zoom_out","Reset view!"),
+       
         visNetworkOutput("network_proxy_nodes",height = "800px")
        
       )
@@ -82,17 +83,22 @@ server <- function(input, output) {
   output$network_proxy_nodes <- renderVisNetwork({
     visNetwork(nodes, edges,main="Superior Science Advocacy Group/Network",submain="This network shows the connections between CSTP event leaders and the instutions they represent or areas they are experts in. We have big plans for using this network, so stay tuned.") %>%
       visInteraction(hover = T) %>%
-      visGroups(groupname="CSTP",size=75,shape="image",image=list(selected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp-selected.png",unselected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp.png")) %>%
+      visGroups(groupname="CSTP",size=75,shape="image",image=list(selected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp-selectedbold.png",unselected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp.png")) %>%
      # visNodes(color=list(hover="purple",highlight="red"))%>%
       visGroups(groupname="Institution",shape="square",color=list(hover="gray",highlight='orange'))%>%
       visGroups(groupname="Person",color=list(hover="gray",highlight="orange"))%>%
       visLegend(position="right",width=.1) %>%
       visEvents(hoverNode = "function(nodes) {
         Shiny.onInputChange('current_node_id', nodes);
-      ;}") %>%
+      ;}", blurNode = "function(nodes) {
+                Shiny.onInputChange('current_node_id', null);
+                ;}") %>%
       visEvents(select = "function(nodes) {
                 Shiny.onInputChange('current_node_id_select', nodes.nodes);
-                ;}")
+                ;}")# %>%
+      #visEvents(select = "function(nodes) {
+      #         Shiny.onInputChange('current_node_id_select', null);
+       #         ;}")
   })
   
   ###### Select events
@@ -107,8 +113,8 @@ server <- function(input, output) {
     return(out)
   })
   
+  
   output$nodeaffl = reactive({
-    
     n <- input$current_node_id_select
     myaffl1 <- nodes$Affiliation1[(nodes$id==n)]
     if(is.null(n)){out<-""}
@@ -120,7 +126,7 @@ server <- function(input, output) {
   
   ##### Hover events
   
-  output$shiny_return <-
+  output$hovernode <-
   renderText({
     if(is.null(input$current_node_id)){""}
     else(paste("",input$current_node_id[[1]]))
@@ -131,14 +137,14 @@ server <- function(input, output) {
   
   observeEvent(input$focus_now, {
     visNetworkProxy("network_proxy_nodes") %>%
-      visFocus(id = input$Focus, scale = 2)
-      
+      visFocus(id = input$Focus, scale = 1) %>%
+      visSelectNodes(id = input$Focus)
   })
   
   observeEvent(input$focus_now_inst, {
     visNetworkProxy("network_proxy_nodes") %>%
-      visFocus(id = input$Focus_inst, scale = 2)
-    
+      visFocus(id = input$Focus_inst, scale = 1) %>%
+      visSelectNodes(id = input$Focus_inst)
   })
   
   observeEvent(input$zoom_out, {
@@ -161,3 +167,9 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
+
+#### IDEAS
+# Each person can have 3 affiliations and 1 discipline
+# Each person can be open to mentorship or not
