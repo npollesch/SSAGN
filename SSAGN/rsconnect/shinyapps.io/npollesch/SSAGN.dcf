@@ -1,0 +1,12 @@
+name: SSAGN
+title: SSAGN
+username:
+account: npollesch
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1600471
+bundleId: 2674526
+url: https://npollesch.shinyapps.io/SSAGN/
+when: 1576561618.89487
+asMultiple: FALSE
+asStatic: FALSE
