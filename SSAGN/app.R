@@ -12,15 +12,20 @@ library(visNetwork)
 #library(googledrive)
 library(plyr)
 library(shinythemes)
+library(shinyjs)
+
 
 # Define UI for application that draws network
-ui <- fluidPage( theme = shinytheme("cyborg"),
+ui <- fluidPage( useShinyjs(), theme = shinytheme("cyborg"),
     
-    titlePanel("Cafe Scientifique Twin Ports - SSAG/N"),
+                
+                 
+    titlePanel(h1("SSAG-N: Superior Science Advocacy Group - Network (vBeta 0.1)"),windowTitle ="SSAG-N"), #need to make h1
     #setBackgroundColor(color="Black"),
-      sidebarLayout(
+      sidebarLayout( position="right",
       
       sidebarPanel(
+        h5(textOutput("about")),
         uiOutput("choose_node"),
         actionButton("focus_now", "Zoom in!"),
         uiOutput("choose_node_inst"),
@@ -29,34 +34,81 @@ ui <- fluidPage( theme = shinytheme("cyborg"),
         h5(textOutput("nodeid")),
         h5(textOutput("nodeaffl")),
         h5(textOutput("hovernode")),
-        tags$head(tags$style("#nodeid{color: orange;
+        
+        tags$style("#about{color: gray;
+                                 font-size: 14px;
+                                 }"
+        ),
+        tags$style("#nodeid{color: orange;
                                  font-size: 20px;
                                  }"
-        ),tags$style("#nodeaffl{color: orange;
-                                 font-size: 14px;
-                                 }"
-        ),tags$style("#hovernode{color: gray;
-                                 font-size: 14px;
-                                 }"
-        )
         ),
+        tags$style("#nodeaffl{color: orange;
+                                 font-size: 14px;
+                                 }"
+        ),
+        tags$style("#hovernode{color: gray;
+                                 font-size: 14px;
+                                 }"
+        ),
+        tags$style("#simpleDesc{color: gray;
+                                 font-size: 14px;
+                                 }"
+        
+        ),
+        tags$style('#fancyDesc{font-family: "lobster", cursive; 
+        color: gray;
+                                 font-size: 14px;
+                                 }'
+                   
+        ),tags$style("#contact{color: gray;
+                                 font-size: 14px;
+                                 }"
+                     
+        ),
+          
+        tags$head(
+          tags$style(HTML("
+      @import url('//fonts.googleapis.com/css?family=Lobster|Cabin:400,700');
+      
+      h1 {
+        font-family: 'Lobster', cursive;
+        color: orange;
+        font-size: 200%;
+        text-align: center;
+      }
+
+    "))),
+        tags$style(HTML('#fancyB{font-family:"lobster",cursive;}'))
+      
+        
+        
         ),
       
       mainPanel(
-       
-        
-       
-        visNetworkOutput("network_proxy_nodes",height = "800px")
-       
-      )
+        actionButton("fancyB", "Description"),
+        hidden(
+          div(id='text_div',
+              h5(textOutput("fancyDesc"))
+          )
+        ),
+        actionButton("simpleB", "Description"),
+        hidden(
+          div(id='text_div2',
+              h5(textOutput("simpleDesc"))
+          )
+        ),
+        #h5(textOutput("fancyDesc")),
+        #h5(textOutput("simpleDesc")),
+        visNetworkOutput("network_proxy_nodes",height = "800px"),
+        h5(textOutput("contact"))
     )
-#visNetworkOutput("network_hello",height = "800px")
-    
-)
+))
 
 # Define server logic required to draw network
 server <- function(input, output) {
 
+  
   network_raw<-read.csv("cstpnetwork.csv")
   nodes <- data.frame(id = network_raw$Name, 
                       Affiliation1 = network_raw$Affiliation.1, 
@@ -81,7 +133,7 @@ server <- function(input, output) {
   edges<-rbind(CSTPtoPeeps,Af1toAf2,PeepstoAf2,PeepstoAf1)
   
   output$network_proxy_nodes <- renderVisNetwork({
-    visNetwork(nodes, edges,main="Superior Science Advocacy Group/Network",submain="This network shows the connections between CSTP event leaders and the instutions they represent or areas they are experts in. We have big plans for using this network, so stay tuned.") %>%
+    visNetwork(nodes, edges) %>%#,submain="SSAG-N is an interactive, visual representation of the people and institutions who are dedicated to expanding human knowledge and experience in the Twin Ports region of Duluth, MN and Superior, WI.") %>%
       visInteraction(hover = T) %>%
       visGroups(groupname="CSTP",size=75,shape="image",image=list(selected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp-selectedbold.png",unselected="https://cafescitwinports.files.wordpress.com/2019/12/ssn-icon-tsp.png")) %>%
      # visNodes(color=list(hover="purple",highlight="red"))%>%
@@ -132,7 +184,15 @@ server <- function(input, output) {
     else(paste("",input$current_node_id[[1]]))
   })
   
-
+#### Static text
+  output$about<-
+    renderText({paste("The Beta version is created from the scientists, researchers, and artists who have lead discussions through Cafe Scientifique Twin Ports.  Information gathering is currently underway to expand the information in the network to faciliate mentorship, collaboration, and availability of experts for media contact. Stay tuned for updates.")})
+  output$fancyDesc<-
+  renderText({paste("Description (fancy): SSAG-N is an interactive, visual representation of the people and institutions dedicated to expanding human knowledge in the Lake Superior region of Duluth, MN and Superior, WI.  It shows the connectivity and relationships among these experts and organizations and can be used to foster further connections and collaborations as well as to track the growth and development of the Twin Ports scientific community.")})
+  output$simpleDesc<-
+    renderText({paste("Description (simple): SSAG-N is a network of organizations and scientists the Twin Ports ;)")})
+  output$contact<-
+    renderText({paste("SSAG-N is being built and maintained by N. Pollesch. vBeta 0.1, Last Update: 12/19/20")})
 #### Zoom and focus events
   
   observeEvent(input$focus_now, {
@@ -162,7 +222,14 @@ server <- function(input, output) {
     selectInput("Focus_inst", "Find an institution:",
                 nodes$id[which(nodes$person==F)])
   })
-    
+  
+  observeEvent(input$fancyB, {
+    toggle('text_div')
+  })
+  observeEvent(input$simpleB, {
+    toggle('text_div2')
+  })
+  
   }
 
 # Run the application 
